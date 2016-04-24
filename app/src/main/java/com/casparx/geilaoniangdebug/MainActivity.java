@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.Bundle;
@@ -83,7 +84,7 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
 
     @OnClick(R.id.btn_confirm)
     void onClickBtnConfirm() {
-        Bitmap bitmap = drawTextToBitmap(this, R.drawable.test_img, tvDate.getText().toString(), tvTime.getText().toString(), "岳阳");
+        Bitmap bitmap = drawTextToBitmap(this, R.drawable.test_img, tvDate.getText().toString()+"     ", tvTime.getText().toString(), " 岳阳");
         imgPhoto.setImageBitmap(bitmap);
     }
 
@@ -91,7 +92,13 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
     public void onDateSet(DatePickerDialog view, int year, int monthOfYear, int dayOfMonth) {
         view.getFirstDayOfWeek();
         String date = null;
-        date = year + "-" + monthOfYear + "-" + dayOfMonth + " " + getWeek(year, monthOfYear, dayOfMonth);
+        String month = null;
+        if (monthOfYear<10){
+            month = "0"+monthOfYear;
+        } else {
+            month = monthOfYear+"";
+        }
+        date = year + "-" + month + "-" + dayOfMonth + " " + getWeek(year, monthOfYear, dayOfMonth);
         tvDate.setText(date);
     }
 
@@ -170,15 +177,19 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
 
         Canvas canvas = new Canvas(bitmap);
         // new antialised Paint
-        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        Paint paint2 = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint datePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint timePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         Paint icPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint localPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         // text color - #3D3D3D
-        paint.setColor(Color.rgb(255, 255, 255));
-        paint2.setColor(Color.rgb(255, 255, 255));
+        datePaint.setColor(Color.rgb(255, 255, 255));
+        timePaint.setColor(Color.rgb(255, 255, 255));
+        localPaint.setColor(Color.rgb(255, 255, 255));
         // text size in pixels
-        paint.setTextSize((int) (14 * scale * 3));
-        paint2.setTextSize((int) (14 * scale * 10));
+        datePaint.setTextSize((int) (14 * scale * 3));
+        icPaint.setTextSize((int) (14 * scale * 3));
+        localPaint.setTextSize((int) (14 * scale * 3));
+        timePaint.setTextSize((int) (14 * scale * 10));
         // text shadow
         //paint.setShadowLayer(1f, 0f, 1f, Color.WHITE);
 
@@ -187,24 +198,39 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
         Rect timeRect = new Rect();
         Rect icRect = new Rect();
         Rect localRect = new Rect();
-        paint.getTextBounds(date, 0, date.length(), dateRect);
-        paint2.getTextBounds(time, 0, time.length(), timeRect);
-        icPaint.getTextBounds("0",0,1,icRect);
+        datePaint.getTextBounds(date, 0, date.length(), dateRect);
+        timePaint.getTextBounds(time, 0, time.length(), timeRect);
+        icPaint.getTextBounds("0",0,"0".length(),icRect);
+        localPaint.getTextBounds(local, 0, local.length(), localRect);
 
-        int x1 = (bitmap.getWidth() - dateRect.width()) / 2;
-        int y1 = (bitmap.getHeight() + dateRect.height()) / 10 * 9;
+
+        int x1 = (bitmap.getWidth() - dateRect.width() - icRect.width() - localRect.width()) / 2;
+        int y1 = (bitmap.getHeight() - 2 * dateRect.height());
 
         int x2 = (bitmap.getWidth() - timeRect.width()) / 2;
-        int y2 = (y1 - timeRect.height());
+        int y2 = (y1 - 2*dateRect.height());
 
-        int x3 = dateRect.left+dateRect.width();
-        int y3 = y1;
+        int x3 = x1+dateRect.width();
+        int y3 = y1-(localRect.height()*4/3);
 
         int x4 = x3+icRect.width();
         int y4 = y1;
 
-        canvas.drawText(date, x1, y1, paint);
-        canvas.drawText(time, x2, y2, paint2);
+        canvas.drawText(date, x1, y1, datePaint);
+        canvas.drawText(time, x2, y2, timePaint);
+
+        Bitmap icBitmap = BitmapFactory.decodeResource(resources, R.drawable.dingwei);
+        int w = icBitmap.getWidth();
+        int h = icBitmap.getHeight();
+        float scaleWidth = ((float) localRect.height()) / w;
+        float scaleHeight = ((float) localRect.height()*3/2) / h;
+        Matrix matrix = new Matrix();
+        matrix.postScale(scaleWidth, scaleHeight);
+        icBitmap = Bitmap.createBitmap(icBitmap,0,0,w,h,matrix,true);
+        //icBitmap.setHeight(localRect.height());
+        //icBitmap.setWidth(localRect.width());
+        canvas.drawBitmap(icBitmap,x3,y3,null);
+        canvas.drawText(local,x4,y4,localPaint);
 
         return bitmap;
     }
