@@ -83,7 +83,7 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
 
     @OnClick(R.id.btn_confirm)
     void onClickBtnConfirm() {
-        Bitmap bitmap = drawTextToBitmap(this, R.drawable.test_img, "1234567890");
+        Bitmap bitmap = drawTextToBitmap(this, R.drawable.test_img, tvDate.getText().toString(), tvTime.getText().toString(), "岳阳");
         imgPhoto.setImageBitmap(bitmap);
     }
 
@@ -151,10 +151,10 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
      *
      * @param gContext
      * @param gResId
-     * @param gText
+     * @param date
      * @return
      */
-    public static Bitmap drawTextToBitmap(Context gContext, int gResId, String gText) {
+    public static Bitmap drawTextToBitmap(Context gContext, int gResId, String date, String time, String local) {
         Resources resources = gContext.getResources();
         float scale = resources.getDisplayMetrics().density;
         Bitmap bitmap = BitmapFactory.decodeResource(resources, gResId);
@@ -171,22 +171,40 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
         Canvas canvas = new Canvas(bitmap);
         // new antialised Paint
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint paint2 = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint icPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         // text color - #3D3D3D
-        paint.setColor(Color.rgb(61, 61, 61));
+        paint.setColor(Color.rgb(255, 255, 255));
+        paint2.setColor(Color.rgb(255, 255, 255));
         // text size in pixels
-        paint.setTextSize((int) (14 * scale * 5));
+        paint.setTextSize((int) (14 * scale * 3));
+        paint2.setTextSize((int) (14 * scale * 10));
         // text shadow
-        paint.setShadowLayer(1f, 0f, 1f, Color.WHITE);
+        //paint.setShadowLayer(1f, 0f, 1f, Color.WHITE);
 
         // draw text to the Canvas center
-        Rect bounds = new Rect();
-        paint.getTextBounds(gText, 0, gText.length(), bounds);
-        //      int x = (bitmap.getWidth() - bounds.width()) / 2;
-        //      int y = (bitmap.getHeight() + bounds.height()) / 2;
-        //draw  text  to the bottom
-        int x = (bitmap.getWidth() - bounds.width()) / 10 * 9;
-        int y = (bitmap.getHeight() + bounds.height()) / 10 * 9;
-        canvas.drawText(gText, x, y, paint);
+        Rect dateRect = new Rect();
+        Rect timeRect = new Rect();
+        Rect icRect = new Rect();
+        Rect localRect = new Rect();
+        paint.getTextBounds(date, 0, date.length(), dateRect);
+        paint2.getTextBounds(time, 0, time.length(), timeRect);
+        icPaint.getTextBounds("0",0,1,icRect);
+
+        int x1 = (bitmap.getWidth() - dateRect.width()) / 2;
+        int y1 = (bitmap.getHeight() + dateRect.height()) / 10 * 9;
+
+        int x2 = (bitmap.getWidth() - timeRect.width()) / 2;
+        int y2 = (y1 - timeRect.height());
+
+        int x3 = dateRect.left+dateRect.width();
+        int y3 = y1;
+
+        int x4 = x3+icRect.width();
+        int y4 = y1;
+
+        canvas.drawText(date, x1, y1, paint);
+        canvas.drawText(time, x2, y2, paint2);
 
         return bitmap;
     }
