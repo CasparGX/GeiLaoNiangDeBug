@@ -12,21 +12,25 @@
         android:layout_height="match_parent">
 
         <TextView
+            android:visibility="gone"
             android:id="@+id/tv_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="24sp"
             android:text="12:15"/>
         <TextView
+            android:visibility="gone"
             android:id="@+id/tv_date"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="2016-04-23 星期六"/>
         <ImageView
+            android:maxHeight="1000dip"
+            android:maxWidth="1000dip"
+            android:scaleType="fitXY"
             android:id="@+id/img_photo"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@drawable/test_img"/>
+            android:layout_height="wrap_content"/>
 
     </LinearLayout>
 

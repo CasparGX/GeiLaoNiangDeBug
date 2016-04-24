@@ -1,7 +1,10 @@
 package com.casparx.geilaoniangdebug;
 
+import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Resources;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -9,10 +12,22 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.media.MediaScannerConnection;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
+import android.text.format.DateFormat;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
+import android.view.View;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.TextView;
 
 import com.rey.material.widget.Button;
@@ -20,6 +35,12 @@ import com.wdullaer.materialdatetimepicker.date.DatePickerDialog;
 import com.wdullaer.materialdatetimepicker.time.RadialPickerLayout;
 import com.wdullaer.materialdatetimepicker.time.TimePickerDialog;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -46,17 +67,29 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
     @Bind(R.id.img_photo)
     ImageView imgPhoto;
 
+    private Bitmap photo;
+    private PopupWindow popupWindowWait;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
+        init();
+    }
+
+    private void init() {
+
     }
 
     /* onClick */
     @OnClick(R.id.btn_choose_pic)
     void onClickBtnChoosePic() {
-
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("image/*");
+        intent.putExtra("crop", true);
+        intent.putExtra("return-data", true);
+        startActivityForResult(intent, 2);
     }
 
     @OnClick(R.id.btn_choose_date)
@@ -83,9 +116,10 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
     }
 
     @OnClick(R.id.btn_confirm)
-    void onClickBtnConfirm() {
-        Bitmap bitmap = drawTextToBitmap(this, R.drawable.test_img, tvDate.getText().toString()+"     ", tvTime.getText().toString(), " 岳阳");
-        imgPhoto.setImageBitmap(bitmap);
+    void onClickBtnConfirm(View view) {
+        Bitmap bitmap = drawTextToBitmap(this, tvDate.getText().toString() + "     ", tvTime.getText().toString(), " 岳阳");
+        imgPhoto.setImageBitmap(readBitMap(bitmap));
+        saveBitmap(bitmap);
     }
 
     @Override
@@ -93,10 +127,10 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
         view.getFirstDayOfWeek();
         String date = null;
         String month = null;
-        if (monthOfYear<10){
-            month = "0"+monthOfYear;
+        if (monthOfYear < 10) {
+            month = "0" + monthOfYear;
         } else {
-            month = monthOfYear+"";
+            month = monthOfYear + "";
         }
         date = year + "-" + month + "-" + dayOfMonth + " " + getWeek(year, monthOfYear, dayOfMonth);
         tvDate.setText(date);
@@ -157,14 +191,13 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
      * 添加文字到图片，类似水印文字。
      *
      * @param gContext
-     * @param gResId
      * @param date
      * @return
      */
-    public static Bitmap drawTextToBitmap(Context gContext, int gResId, String date, String time, String local) {
+    public Bitmap drawTextToBitmap(Context gContext, String date, String time, String local) {
         Resources resources = gContext.getResources();
         float scale = resources.getDisplayMetrics().density;
-        Bitmap bitmap = BitmapFactory.decodeResource(resources, gResId);
+        Bitmap bitmap = this.photo;
 
         Bitmap.Config bitmapConfig = bitmap.getConfig();
         // set default bitmap config if none
@@ -200,7 +233,7 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
         Rect localRect = new Rect();
         datePaint.getTextBounds(date, 0, date.length(), dateRect);
         timePaint.getTextBounds(time, 0, time.length(), timeRect);
-        icPaint.getTextBounds("0",0,"0".length(),icRect);
+        icPaint.getTextBounds("0", 0, "0".length(), icRect);
         localPaint.getTextBounds(local, 0, local.length(), localRect);
 
 
@@ -208,12 +241,12 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
         int y1 = (bitmap.getHeight() - 2 * dateRect.height());
 
         int x2 = (bitmap.getWidth() - timeRect.width()) / 2;
-        int y2 = (y1 - 2*dateRect.height());
+        int y2 = (y1 - 2 * dateRect.height());
 
-        int x3 = x1+dateRect.width();
-        int y3 = y1-(localRect.height()*4/3);
+        int x3 = x1 + dateRect.width();
+        int y3 = y1 - (localRect.height() * 4 / 3);
 
-        int x4 = x3+icRect.width();
+        int x4 = x3 + icRect.width();
         int y4 = y1;
 
         canvas.drawText(date, x1, y1, datePaint);
@@ -223,16 +256,121 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
         int w = icBitmap.getWidth();
         int h = icBitmap.getHeight();
         float scaleWidth = ((float) localRect.height()) / w;
-        float scaleHeight = ((float) localRect.height()*3/2) / h;
+        float scaleHeight = ((float) localRect.height() * 3 / 2) / h;
         Matrix matrix = new Matrix();
         matrix.postScale(scaleWidth, scaleHeight);
-        icBitmap = Bitmap.createBitmap(icBitmap,0,0,w,h,matrix,true);
+        icBitmap = Bitmap.createBitmap(icBitmap, 0, 0, w, h, matrix, true);
         //icBitmap.setHeight(localRect.height());
         //icBitmap.setWidth(localRect.width());
-        canvas.drawBitmap(icBitmap,x3,y3,null);
-        canvas.drawText(local,x4,y4,localPaint);
+        canvas.drawBitmap(icBitmap, x3, y3, null);
+        canvas.drawText(local, x4, y4, localPaint);
 
         return bitmap;
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK) {
+            System.out.println("requestCode" + requestCode);
+            if (requestCode == 2) {
+                Uri uri = data.getData();
+                System.out.println(uri.getPath());
+
+                ContentResolver cr = this.getContentResolver();
+
+                try {
+                    photo = BitmapFactory.decodeStream(cr.openInputStream(uri));
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+
+                //String picturePath = getImageFilePath(uri);
+                //图片压缩工具类
+                //CompImageUtil compImage = new CompImageUtil();
+                //photo = compImage.getimage(picturePath, 1500f, 1500f, 500);
+                imgPhoto.setImageBitmap(readBitMap(photo));
+
+            }
+        }
+
+    }
+
+    /**
+     * 保存方法
+     */
+    public void saveBitmap(Bitmap bitmap) {
+        String photoDir = Environment.getExternalStorageDirectory() + "/" + Environment.DIRECTORY_DCIM + "/Camera/";
+        File f = new File(photoDir + DateFormat.format("yyyy-MM-dd kk.mm.ss", System.currentTimeMillis()).toString() + ".jpg");
+        if (f.exists()) {
+            f.delete();
+        }
+        try {
+            FileOutputStream out = new FileOutputStream(f);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
+            out.flush();
+            out.close();
+            MediaScannerConnection.scanFile(MainActivity.this, new String[]{f + ""}, null, null);
+            Snackbar.make(btnConfirm,"图片生成成功，到相册查看",Snackbar.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Snackbar.make(btnConfirm,"图片生成失败",Snackbar.LENGTH_SHORT).show();
+        }
+
+    }
+
+    private void showPopupWindowWait(View view) {
+        //自定义布局
+        View contentView = LayoutInflater.from(this).inflate(
+                R.layout.popupwindow_wait, null);
+        popupWindowWait = new PopupWindow(contentView,
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true);
+
+        popupWindowWait.setTouchable(true);
+
+        popupWindowWait.setTouchInterceptor(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                return true;
+                // 这里如果返回true的话，touch事件将被拦截
+                // 拦截后 PopupWindow的onTouchEvent不被调用，这样点击外部区域无法dismiss
+            }
+        });
+
+        // 如果不设置PopupWindow的背景，无论是点击外部区域还是Back键都无法dismiss弹框
+        // 我觉得这里是API的一个bug
+        popupWindowWait.setBackgroundDrawable(getResources().getDrawable(R.drawable.bg_default_black));
+
+        // 设置好参数之后再show
+        popupWindowWait.showAtLocation(view, Gravity.CENTER, 0, 0);
+    }
+
+    /**
+     * 以最省内存的方式读取本地资源的图片
+     *
+     * @param bm
+     * @return
+     */
+    public static Bitmap readBitMap(Bitmap bm) {
+        BitmapFactory.Options opt = new BitmapFactory.Options();
+        opt.inPreferredConfig = Bitmap.Config.RGB_565;
+        opt.inPurgeable = true;
+        opt.inInputShareable = true;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        bm.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+        InputStream is = new ByteArrayInputStream(baos.toByteArray());
+        return BitmapFactory.decodeStream(is, null, opt);
+    }
+
+    private String getImageFilePath(Uri selectedImage) {
+        String[] filePathColumn = {MediaStore.Images.Media.DATA};
+
+        Cursor cursor = getContentResolver().query(selectedImage,
+                filePathColumn, null, null, null);
+        cursor.moveToFirst();
+
+        int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+        String picturePath = cursor.getString(columnIndex);
+        cursor.close();
+        return picturePath;
+    }
 }
