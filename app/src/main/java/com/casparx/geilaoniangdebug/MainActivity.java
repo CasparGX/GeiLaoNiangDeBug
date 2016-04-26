@@ -127,11 +127,13 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
         view.getFirstDayOfWeek();
         String date = null;
         String month = null;
+        monthOfYear+=1;
         if (monthOfYear < 10) {
             month = "0" + monthOfYear;
         } else {
             month = monthOfYear + "";
         }
+        Log.i("month",month);
         date = year + "-" + month + "-" + dayOfMonth + " " + getWeek(year, monthOfYear, dayOfMonth);
         tvDate.setText(date);
     }
