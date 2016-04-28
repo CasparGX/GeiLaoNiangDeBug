@@ -70,6 +70,23 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
     private Bitmap photo;
     private PopupWindow popupWindowWait;
 
+    /**
+     * 以最省内存的方式读取本地资源的图片
+     *
+     * @param bm
+     * @return
+     */
+    public static Bitmap readBitMap(Bitmap bm) {
+        BitmapFactory.Options opt = new BitmapFactory.Options();
+        opt.inPreferredConfig = Bitmap.Config.RGB_565;
+        opt.inPurgeable = true;
+        opt.inInputShareable = true;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        bm.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+        InputStream is = new ByteArrayInputStream(baos.toByteArray());
+        return BitmapFactory.decodeStream(is, null, opt);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -127,21 +144,40 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
         view.getFirstDayOfWeek();
         String date = null;
         String month = null;
-        monthOfYear+=1;
+        String day = null;
+        monthOfYear += 1;
         if (monthOfYear < 10) {
             month = "0" + monthOfYear;
         } else {
             month = monthOfYear + "";
         }
-        Log.i("month",month);
-        date = year + "-" + month + "-" + dayOfMonth + " " + getWeek(year, monthOfYear, dayOfMonth);
+        if (dayOfMonth < 10) {
+            day = "0" + dayOfMonth;
+        } else {
+            day = dayOfMonth + "";
+        }
+        Log.i("month", month);
+        date = year + "-" + month + "-" + day + " " + getWeek(year, monthOfYear - 1, dayOfMonth);
         tvDate.setText(date);
     }
 
     @Override
     public void onTimeSet(RadialPickerLayout view, int hourOfDay, int minute, int second) {
         String time = null;
-        time = hourOfDay + ":" + minute;
+        String minuteString = "";
+        String hourString = "";
+        if (minute < 10) {
+            minuteString = "0" + minute;
+        } else {
+            minuteString = minute+"";
+        }
+        if (hourOfDay<10){
+            hourString = "0"+hourOfDay;
+        } else {
+            hourString = hourOfDay +"";
+        }
+        time = hourString + ":" + minuteString;
+        Log.i("time",time);
         tvTime.setText(time);
     }
 
@@ -313,9 +349,9 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
             out.flush();
             out.close();
             MediaScannerConnection.scanFile(MainActivity.this, new String[]{f + ""}, null, null);
-            Snackbar.make(btnConfirm,"图片生成成功，到相册查看",Snackbar.LENGTH_SHORT).show();
+            Snackbar.make(btnConfirm, "图片生成成功，到相册查看", Snackbar.LENGTH_SHORT).show();
         } catch (Exception e) {
-            Snackbar.make(btnConfirm,"图片生成失败",Snackbar.LENGTH_SHORT).show();
+            Snackbar.make(btnConfirm, "图片生成失败", Snackbar.LENGTH_SHORT).show();
         }
 
     }
@@ -344,23 +380,6 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
 
         // 设置好参数之后再show
         popupWindowWait.showAtLocation(view, Gravity.CENTER, 0, 0);
-    }
-
-    /**
-     * 以最省内存的方式读取本地资源的图片
-     *
-     * @param bm
-     * @return
-     */
-    public static Bitmap readBitMap(Bitmap bm) {
-        BitmapFactory.Options opt = new BitmapFactory.Options();
-        opt.inPreferredConfig = Bitmap.Config.RGB_565;
-        opt.inPurgeable = true;
-        opt.inInputShareable = true;
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        bm.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-        InputStream is = new ByteArrayInputStream(baos.toByteArray());
-        return BitmapFactory.decodeStream(is, null, opt);
     }
 
     private String getImageFilePath(Uri selectedImage) {
