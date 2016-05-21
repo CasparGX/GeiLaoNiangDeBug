@@ -3,6 +3,7 @@ package com.casparx.geilaoniangdebug;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -17,6 +18,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.text.format.DateFormat;
@@ -29,6 +31,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.rey.material.widget.Button;
 import com.wdullaer.materialdatetimepicker.date.DatePickerDialog;
@@ -69,6 +72,7 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
 
     private Bitmap photo;
     private PopupWindow popupWindowWait;
+    private Bitmap BITMAP;
 
     /**
      * 以最省内存的方式读取本地资源的图片
@@ -136,6 +140,7 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
     void onClickBtnConfirm(View view) {
         Bitmap bitmap = drawTextToBitmap(this, tvDate.getText().toString() + "     ", tvTime.getText().toString(), " 岳阳");
         imgPhoto.setImageBitmap(readBitMap(bitmap));
+        BITMAP = bitmap;
         saveBitmap(bitmap);
     }
 
@@ -234,8 +239,13 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
      */
     public Bitmap drawTextToBitmap(Context gContext, String date, String time, String local) {
         Resources resources = gContext.getResources();
-        float scale = resources.getDisplayMetrics().density;
         Bitmap bitmap = this.photo;
+        float scale = resources.getDisplayMetrics().density;
+        //scale = bitmap.getDensity();
+        float fontSize = bitmap.getWidth()/1080;
+        if (fontSize<1){
+            fontSize = 1;
+        }
 
         Bitmap.Config bitmapConfig = bitmap.getConfig();
         // set default bitmap config if none
@@ -257,10 +267,10 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
         timePaint.setColor(Color.rgb(255, 255, 255));
         localPaint.setColor(Color.rgb(255, 255, 255));
         // text size in pixels
-        datePaint.setTextSize((int) (14 * scale * 3));
-        icPaint.setTextSize((int) (14 * scale * 3));
-        localPaint.setTextSize((int) (14 * scale * 3));
-        timePaint.setTextSize((int) (14 * scale * 10));
+        datePaint.setTextSize((int) (14 *fontSize * 3));
+        icPaint.setTextSize((int) (14 *fontSize * 3));
+        localPaint.setTextSize((int) (14 *fontSize * 3));
+        timePaint.setTextSize((int) (14 *fontSize * 10));
         // text shadow
         //paint.setShadowLayer(1f, 0f, 1f, Color.WHITE);
 
@@ -351,9 +361,25 @@ public class MainActivity extends AppCompatActivity implements DatePickerDialog.
             MediaScannerConnection.scanFile(MainActivity.this, new String[]{f + ""}, null, null);
             Snackbar.make(btnConfirm, "图片生成成功，到相册查看", Snackbar.LENGTH_SHORT).show();
         } catch (Exception e) {
+            e.printStackTrace();
             Snackbar.make(btnConfirm, "图片生成失败", Snackbar.LENGTH_SHORT).show();
         }
 
+    }
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == 200) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // save file
+                saveBitmap(BITMAP);
+            } else {
+                Toast.makeText(getApplicationContext(), "PERMISSION_DENIED", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     private void showPopupWindowWait(View view) {
